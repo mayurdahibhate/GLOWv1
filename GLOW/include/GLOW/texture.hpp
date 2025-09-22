@@ -7,6 +7,8 @@
 
 void loadTextureFromFile(const char* path, GLuint *texture)
 {
+    stbi_set_flip_vertically_on_load(true); 
+
     unsigned char *data;
     int width = 0, height = 0;
     int nrChannels = 0;

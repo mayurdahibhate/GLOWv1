@@ -16,32 +16,37 @@ GLuint vbo_color = 0;
 
 glm::mat4 perspectiveProjectionMatrix;	
 
-Shader *simpleShader = NULL;
+GLOWshader *simpleShader = NULL;
 
 void init(void);
 
-void keyboard(unsigned int);
 void draw(void);
 void update(void);
+
+void keyboard(unsigned int);
+
 void resize(int, int);
 
 void uninit();
 
 // entry point function
 int main(int argc, char **argv) {
-	glowInitializeCallback(init);
 
-	glowKeyboardCallback(keyboard);
-	glowReshapeCallback(resize);
+	GLOWwindow* window = glowCreateWindow("Hello triangle!", 800, 600);
 
-	glowDisplayCallback(draw);
-	glowUpdateCallback(update);
+	window->glowReshapeCallback(resize);
+	
+	init();
 
-	glowCreateWindow("Hello triangle!", 100, 100, 800, 600);
+	while (!(window->glowWindowShouldClose())) {
+		draw();
+		update();
+    
+		window->glowSwapBuffers();
+	}
 
-	glowEventLoop();
-
-	glowUninitiiizeCallback(uninit);
+	uninit();
+	window->glowDestroyWindow();
 
 	return 0;
 }
@@ -52,7 +57,7 @@ void init(void) {
         exit(-1);
     }
 
-    simpleShader = new Shader("shaders/shader.vert", "shaders/shader.frag");
+    simpleShader = new GLOWshader("shaders/shader.vert", "shaders/shader.frag");
 
 	const GLfloat trianglePosition[] = {
 		0.0f, 1.0f, 0.0f,
@@ -99,12 +104,7 @@ void init(void) {
 	perspectiveProjectionMatrix = glm::mat4(1.0);
 }
 
-void keyboard(unsigned int key) {
-	
-}
-
 void resize(int width, int height) {
-    // code
 	if (height <= 0)
 		height = 1;
 
@@ -133,8 +133,6 @@ void draw(void) {
 
 	glBindVertexArray(0);
 	glUseProgram(0);
-
-    glowSwapBuffers();
 }
 
 void update(void) {

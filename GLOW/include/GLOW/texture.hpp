@@ -5,8 +5,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
 
-void loadTextureFromFile(const char* path, GLuint *texture)
-{
+void loadTextureFromFile(const char* path, GLuint *texture) {
     stbi_set_flip_vertically_on_load(true); 
 
     unsigned char *data;

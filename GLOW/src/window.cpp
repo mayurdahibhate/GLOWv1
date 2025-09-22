@@ -1,54 +1,5 @@
 #include <glad/glad.h>
-#include "GLOW/window.hpp"
-
-#ifdef _WIN32
-	HWND _ghwnd = NULL;
-	DWORD _dwStyle = 0;
-	WINDOWPLACEMENT _wpPrev = { sizeof(WINDOWPLACEMENT) };
-
-	BOOL _gbFullscreen = FALSE;
-	BOOL _gbActive = FALSE;
-
-	int _gWidth = 800;
-	int _gHeight = 600;
-
-	// OpenGL related global variables
-	HDC ghdc = NULL;
-	HGLRC ghrc = NULL;
-#else
-	Display *display = NULL;
-	Colormap colormap;
-	Window window;
-	XVisualInfo *visualInfo;
-
-    XEvent event;
-    KeySym keySym;
-    char keys[26];
-
-	Bool _gbFullscreen = False;
-	Bool _gbActive = False;
-
-	Bool bDone = False;
-
-	int _gWidth = 800;
-	int _gHeight = 600;
-
-	// OpenGL global variable
-	glXCreateContextAttribsARBproc glXCreateContextAttribsARB = NULL;
-	GLXFBConfig glxFBConfig;
-	GLXContext glxContext = NULL;
-#endif
-
-
-// global callback declarations
-InitializeCallback   _initializeCallback  = NULL;
-KeyboardCallback     _keyboardCallback    = NULL;  
-MouseMoveCallback    _mouseMoveCallback   = NULL; 
-MouseClickCallback   _mouseClickCallback  = NULL;
-DisplayCallback      _displayCallback     = NULL;   
-UpdateCallback       _updateCallback      = NULL;    
-ReshapeCallback      _reshapeCallback     = NULL;   
-UninitializeCallback _uninitializeCallback = NULL;
+#include <GLOW/window.hpp>
 
 #ifdef WIN32
 LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
@@ -213,7 +164,7 @@ int initialize(void)
 	return(0);
 }
 
-void acewmEventLoop()
+void glowEventLoop()
 {
     // variables
     BOOL bDone = FALSE;
@@ -291,8 +242,7 @@ void _uninitialize(void)
 
 }
 
-void acewmCreateWindow(const char *title, int x, int y, int width, int height)
-{
+GLOWwindow* glowCreateWindow(const char *title, int x, int y, int width, int height) {
     // variables 
 	int iRet = 0;
 	WNDCLASSEX wndclass;
@@ -309,7 +259,6 @@ void acewmCreateWindow(const char *title, int x, int y, int width, int height)
     szClassName = (TCHAR*)title;
 
 	// code
-	// TO DO : create file for logging
 
 	// WNDCLASSEX initialization
 	wndclass.cbSize = sizeof(WNDCLASSEX);
@@ -378,97 +327,18 @@ void acewmCreateWindow(const char *title, int x, int y, int width, int height)
 	SetFocus(hwnd);
 }
 
-void acewmSwapBuffers(void)
+void glowSwapBuffers(void)
 {
 	SwapBuffers(ghdc);
 }
 
 #else
 
-int initialize()
-{
-	// local variable declarations
-    int attribs_new[] = {
-        GLX_CONTEXT_MAJOR_VERSION_ARB, 4,
-        GLX_CONTEXT_MINOR_VERSION_ARB, 6,
-        GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
-        None
-    };
-
-    int attribs_old[] = {
-        GLX_CONTEXT_MAJOR_VERSION_ARB, 1,
-        GLX_CONTEXT_MINOR_VERSION_ARB, 0,
-        None
-    };
-
-    // code
-    // get the address of function in function pointer
-    glXCreateContextAttribsARB = (glXCreateContextAttribsARBproc)glXGetProcAddress((GLubyte*)"glXCreateContextAttribsARB");
-
-    if (glXCreateContextAttribsARB == NULL)
-    {
-        // fprintf(file, "Can not get required function address : glXCreateContextAttribsARB");
-        // uninitialize();
-        return -3;
-    }
-
-    // create OpenGL context programmable pipeline compatible
-    glxContext = glXCreateContextAttribsARB(display, glxFBConfig, 0, True, attribs_new);
-
-    if (!glxContext)
-    {
-        // fprintf(file, "Core profile based glXContext not found.\nSo falling back to old context.\n");
-        // glxContext = glXCreateContextAttribsARB(display, glxFBConfig, 0, True, attribs_old);
-
-        if (!glxContext)
-        {
-            // fprintf(file, "Old GLXContext cannot be found!\n");
-            uninitialize();
-        }
-        else
-        {
-            // fprintf(file, "Old glxContext found.\n");
-        }
-
-        if (!glXIsDirect(display, glxContext))
-        {
-            // fprintf(file, "Not supporting hardware rendering.\n");
-        }
-        else
-        {
-            // fprintf(file, "Supporting hardware rendering.\n");
-        }
-    }
-    else
-    {
-        // fprintf(file, "Core glxContext found successfully.\n");
-    }
-
-    // make this context as current context
-    if (glXMakeCurrent(display, window, glxContext) == False)
-    {
-        // fprintf(file, "glXMakeCurrent() failed!\n");
-        return -2;
-    }
-
-    if(_initializeCallback)
-    {
-        _initializeCallback();
-    }
-
-	// warm up resize
-    if(_reshapeCallback) 
-    {
-        _reshapeCallback(_gWidth, _gHeight);
-	}
-
-	return 0;     
-}
-
-void acewmCreateWindow(const char *title, int x, int y, int width, int height)
-{
-
-   	// local variable declarations
+GLOWwindow* glowCreateWindow(const char *title, int x, int y, int width, int height) {
+   	
+    GLOWwindow *newWindow = new GLOWwindow();
+    
+    // local variable declarations
     int defaultScreen;
     XSetWindowAttributes windowAtrributes;
     int styleMask;
@@ -513,18 +383,21 @@ void acewmCreateWindow(const char *title, int x, int y, int width, int height)
 
     // code
     // open a connection with X server and get display interface
-    display = XOpenDisplay(NULL);
+    newWindow->display = XOpenDisplay(NULL);
 
-    if (display == NULL)
+    newWindow->_gWidth = width;
+    newWindow->_gHeight = height;
+
+    if (newWindow->display == NULL)
     {
         exit(1);
     }
 
     // get default screen from above display
-    defaultScreen = XDefaultScreen(display);
+    defaultScreen = XDefaultScreen(newWindow->display);
 
     // get available FBconfigs
-    glxFBConfigs = glXChooseFBConfig(display, defaultScreen, frameBufferAtrributes, &numFBConfigs);
+    glxFBConfigs = glXChooseFBConfig(newWindow->display, defaultScreen, frameBufferAtrributes, &numFBConfigs);
 
     if (glxFBConfigs == NULL)
     {
@@ -534,14 +407,14 @@ void acewmCreateWindow(const char *title, int x, int y, int width, int height)
     // find best matching FBConfig from array obtained from above
     for (i = 0; i < numFBConfigs; i++)
     {
-        tempXVisualInfo = glXGetVisualFromFBConfig(display, glxFBConfigs[i]);
+        tempXVisualInfo = glXGetVisualFromFBConfig(newWindow->display, glxFBConfigs[i]);
 
         if (tempXVisualInfo != NULL)
         {
             // get sample buffers
-            glXGetFBConfigAttrib(display, glxFBConfigs[i], GLX_SAMPLE_BUFFERS, &sampleBuffers);
+            glXGetFBConfigAttrib(newWindow->display, glxFBConfigs[i], GLX_SAMPLE_BUFFERS, &sampleBuffers);
 
-            glXGetFBConfigAttrib(display, glxFBConfigs[i], GLX_SAMPLES, &samples);
+            glXGetFBConfigAttrib(newWindow->display, glxFBConfigs[i], GLX_SAMPLES, &samples);
 
             if (bestFrameBufferConfig < 0 || sampleBuffers && samples > bestNumOfSamples)
             {
@@ -564,88 +437,145 @@ void acewmCreateWindow(const char *title, int x, int y, int width, int height)
     bestGLXconfig = glxFBConfigs[bestFrameBufferConfig];
 
     // assign to global glxConfig
-    glxFBConfig = bestGLXconfig;
+    newWindow->glxFBConfig = bestGLXconfig;
     
     XFree(glxFBConfigs);
 
     // now get best visual bestFBConfig
-    visualInfo = glXGetVisualFromFBConfig(display, glxFBConfig);
+    newWindow->visualInfo = glXGetVisualFromFBConfig(newWindow->display, newWindow->glxFBConfig);
 
     // set window attriubtes / properties
     memset((void*)&windowAtrributes, 0, sizeof(XWindowAttributes));
     windowAtrributes.border_pixel = 0;
-    windowAtrributes.background_pixel = XBlackPixel(display, visualInfo->screen);
+    windowAtrributes.background_pixel = XBlackPixel(newWindow->display, newWindow->visualInfo->screen);
     windowAtrributes.background_pixmap = 0;
-    windowAtrributes.colormap = XCreateColormap(display,
-                                    XRootWindow(display, visualInfo->screen),
-                                    visualInfo->visual,
+    windowAtrributes.colormap = XCreateColormap(newWindow->display,
+                                    XRootWindow(newWindow->display, newWindow->visualInfo->screen),
+                                    newWindow->visualInfo->visual,
                                     AllocNone
                                 );
 
     // assign this colormap to global colormap
-    colormap = windowAtrributes.colormap;
+    newWindow->colormap = windowAtrributes.colormap;
 
     // set the style of the window CW = create window
     styleMask = CWBorderPixel | CWBackPixel | CWColormap | CWEventMask;
 
     // now finally create a window
-    window = XCreateWindow(display,
-                            XRootWindow(display, visualInfo->screen),
+    newWindow->window = XCreateWindow(newWindow->display,
+                            XRootWindow(newWindow->display, newWindow->visualInfo->screen),
                             0,
                             0,
-                            _gWidth,
-                            _gHeight,
+                            newWindow->_gWidth,
+                            newWindow->_gHeight,
                             0,
-                            visualInfo->depth,
+                            newWindow->visualInfo->depth,
                             InputOutput,
-                            visualInfo->visual,
+                            newWindow->visualInfo->visual,
                             styleMask,
                             &windowAtrributes
                         );
 
-    if (!window)
+    if (!newWindow->window)
     {
         exit(1);        
     }
 
     // specify to which events this window should respond
-    XSelectInput(display, window,
+    XSelectInput(newWindow->display, newWindow->window,
                 ExposureMask | VisibilityChangeMask | StructureNotifyMask | KeyPressMask | ButtonPressMask | PointerMotionMask | FocusChangeMask
             );
 
     // specify window manager delete atom
-    windowMangerDelete = XInternAtom(display, "WM_DELETE_WINDOW", True);
+    windowMangerDelete = XInternAtom(newWindow->display, "WM_DELETE_WINDOW", True);
 
     // add/set above atom as a protocol for window manager
-    XSetWMProtocols(display, window, &windowMangerDelete, 1);
+    XSetWMProtocols(newWindow->display, newWindow->window, &windowMangerDelete, 1);
 
     // give caption to window
-    XStoreName(display, window, title);
+    XStoreName(newWindow->display, newWindow->window, title);
 
     // show / map the window
-    XMapWindow(display, window);
+    XMapWindow(newWindow->display, newWindow->window);
 
     // center the window
-    screenWidth = XWidthOfScreen(XScreenOfDisplay(display, visualInfo->screen));
-    screenHeight = XHeightOfScreen(XScreenOfDisplay(display, visualInfo->screen));
+    if (x == -1 && y == -1) {
+        screenWidth = XWidthOfScreen(XScreenOfDisplay(newWindow->display, newWindow->visualInfo->screen));
+        screenHeight = XHeightOfScreen(XScreenOfDisplay(newWindow->display, newWindow->visualInfo->screen));
 
-    XMoveWindow(display, window, (screenWidth - width)/2 , (screenHeight - height)/2);
+        XMoveWindow(newWindow->display, newWindow->window, (screenWidth - width)/2 , (screenHeight - height)/2);
+    }
 
     // OpenGL initialization
-	result = initialize();
+	result = newWindow->initialize();
 
 	if (result != 0) {
         exit(1);
 	}
+    
+    return newWindow;
 }
 
-void uninitialize()
-{
+GLOWwindow* glowCreateWindow(const char *title, int width, int height) {
+    return glowCreateWindow(title, -1, -1, width, height);
+}
+
+int GLOWwindow::initialize() {
+	// local variable declarations
+    int attribs_new[] = {
+        GLX_CONTEXT_MAJOR_VERSION_ARB, 4,
+        GLX_CONTEXT_MINOR_VERSION_ARB, 6,
+        GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
+        None
+    };
+
+    int attribs_old[] = {
+        GLX_CONTEXT_MAJOR_VERSION_ARB, 1,
+        GLX_CONTEXT_MINOR_VERSION_ARB, 0,
+        None
+    };
+
+    // code
+    // get the address of function in function pointer
+    glXCreateContextAttribsARB = (glXCreateContextAttribsARBproc)glXGetProcAddress((GLubyte*)"glXCreateContextAttribsARB");
+
+    if (glXCreateContextAttribsARB == NULL) {
+        return -3;
+    }
+
+    // create OpenGL context programmable pipeline compatible
+    glxContext = glXCreateContextAttribsARB(display, glxFBConfig, 0, True, attribs_new);
+
+    if (!glxContext) {
+        glxContext = glXCreateContextAttribsARB(display, glxFBConfig, 0, True, attribs_old);
+
+        if (!glxContext)
+        {
+            uninitialize();
+        }
+
+        if (!glXIsDirect(display, glxContext)) {
+
+        }
+        else {
+
+        }
+    }
+    else {
+
+    }
+
+    // make this context as current context
+    if (glXMakeCurrent(display, window, glxContext) == False) {
+        return -2;
+    }
+
+	return 0;     
+}
+
+void GLOWwindow::uninitialize() {
 	// local variable declarations
     GLXContext currentGLXContext = NULL;
-
-	if (_uninitializeCallback)
-	_uninitializeCallback();
 
     // uncurrent the context
     currentGLXContext = glXGetCurrentContext();
@@ -678,8 +608,7 @@ void uninitialize()
     }
 }
 
-void ToggleFullscreen(void)
-{
+void GLOWwindow::ToggleFullscreen(void) {
     Atom windowManagerStateNormal;
     Atom windowManagerStateFullscreen;
     XEvent event;
@@ -702,201 +631,134 @@ void ToggleFullscreen(void)
     XSendEvent(display, XRootWindow(display, visualInfo->screen), False, SubstructureNotifyMask, &event);
 }
 
-void acewmEventLoop()
-{
-	// game loop
-    while (bDone == False)
-    {
-        while (XPending(display))
-        {
-            memset((void*)&event, 0, sizeof(XEvent));
-            XNextEvent(display, &event);
+bool GLOWwindow::glowWindowShouldClose() {
 
-            switch (event.type)
-            {
-            case MapNotify:
-                break;
+    // game loop
+    while (XPending(this->display)) {
+        memset((void*)&event, 0, sizeof(XEvent));
+        XNextEvent(this->display, &event);
 
-            case FocusIn:
-                _gbActive = True;
-                break;
+        switch (event.type) {
+        case MapNotify:
+            break;
 
-            case FocusOut:
-                _gbActive = False;
-                break;
+        case FocusIn:
+            _gbActive = True;
+            break;
 
-            case ConfigureNotify:
-                _gWidth = event.xconfigure.width;
-                _gHeight = event.xconfigure.height;
-        		_reshapeCallback(_gWidth, _gHeight);
-                break;
+        case FocusOut:
+            _gbActive = False;
+            break;
 
-            case KeyPress:
-                keySym = XkbKeycodeToKeysym(display, event.xkey.keycode, 0, 0);
+        case ConfigureNotify:
+            _gWidth = event.xconfigure.width;
+            _gHeight = event.xconfigure.height;
+        
+            if(_reshapeCallback) {
+                _reshapeCallback(_gWidth, _gHeight);
+            }
+            break;
 
-                switch (keySym)
-                {
+        case KeyPress:
+            keySym = XkbKeycodeToKeysym(display, event.xkey.keycode, 0, 0);
+
+            switch (keySym) {
                 case XK_Escape:
                     bDone = True;
                     break;
                 
                 default:
                     break;
-                }
+            }
 
-                XLookupString(&event.xkey, keys, sizeof(keys), NULL, NULL);
+            XLookupString(&event.xkey, keys, sizeof(keys), NULL, NULL);
 
-                switch (keys[0])
+            switch (keys[0])
+            {
+            case 'F':
+            case 'f':
+                if (_gbFullscreen == False)
                 {
-                case 'F':
-                case 'f':
-                    if (_gbFullscreen == False)
-                    {
-                        ToggleFullscreen();
-                        _gbFullscreen = True;
-                    }
-                    else
-                    {
-                        ToggleFullscreen();
-                        _gbFullscreen = False;
-                    }
-                    break;
-                
-                default:
-                    break;
+                    ToggleFullscreen();
+                    _gbFullscreen = True;
                 }
-
-                break; // keypress
+                else
+                {
+                    ToggleFullscreen();
+                    _gbFullscreen = False;
+                }
+                break;
             
-            case ButtonPress:
-                switch (event.xbutton.button)
-                {
-                case 1: // LEFT MOUSE BUTTON
-                    break;
-                case 2: // MIDDLE MOUSE BUTTON
-                    break;
-                case 3: // RIGHT MOUSE BUTTON
-                    break;                            
-                default:
-                    break;
-                }
-                break;
-            case 33:
-                bDone = True;
-                break;
-
             default:
                 break;
             }
-        }
 
-        // rendering
-        if (_gbActive)
-        {
-            if (_displayCallback)
-			{
-			    _displayCallback();
-			}
+            break; // keypress
+        
+        case ButtonPress:
+            switch (event.xbutton.button)
+            {
+            case 1: // LEFT MOUSE BUTTON
+                break;
+            case 2: // MIDDLE MOUSE BUTTON
+                break;
+            case 3: // RIGHT MOUSE BUTTON
+                break;                            
+            default:
+                break;
+            }
+            break;
+        case 33:
+            bDone = True;
+            break;
 
-            if (_updateCallback)
-			{
-			    _updateCallback();
-			}
+        default:
+            break;
         }
     }
 
-    uninitialize();
+    return bDone;
 }
-
-void acewmSwapBuffers(void)
-{
-	glXSwapBuffers(display, window);
-}
-
 #endif
 
-void acewmInitializeCallback(InitializeCallback callback)
-{
-    _initializeCallback = callback;
-}
-
-void acewmUninitiiizeCallback(UninitializeCallback callback)
-{
-    _uninitializeCallback = callback;
-}
-
-
 // input callbacks
-void acewmKeyboardCallback(KeyboardCallback callback)
+void GLOWwindow::glowKeyboardCallback(KeyboardCallback callback)
 {
     _keyboardCallback = callback;
 }
 
-void acewmMouseMoveCallback(MouseMoveCallback callback)
+void GLOWwindow::glowMouseMoveCallback(MouseMoveCallback callback)
 {
     _mouseMoveCallback = callback;
 }
 
-void acewmMouseClickCallback(MouseClickCallback callback)
+void GLOWwindow::glowMouseClickCallback(MouseClickCallback callback)
 {
     _mouseClickCallback = callback;
 }
 
-// draw and update
-void acewmDisplayCallback(DisplayCallback callback)
-{
-    _displayCallback = callback;
-}
-void acewmUpdateCallback(UpdateCallback callback)
-{
-    _updateCallback = callback;
-}
-
-// swap buffers
-void acewmReshapeCallback(ReshapeCallback callback)
+// reshape and swap buffers
+void GLOWwindow::glowReshapeCallback(ReshapeCallback callback)
 {
     _reshapeCallback = callback;
 }
 
-
-void acewmFullScreen()
+void GLOWwindow::glowFullScreen()
 {
     if (!_gbFullscreen)
         ToggleFullscreen();
 }
 
-void acewmExitFullScreen()
+void GLOWwindow::glowExitFullScreen()
 {
     if (_gbFullscreen)
         ToggleFullscreen();
 }
 
-void acewmDestroyWindow(void)
-{
-    // 
+void GLOWwindow::glowSwapBuffers(void) {
+	glXSwapBuffers(this->display, this->window);
 }
 
-void printGLInfo(void) {
-	// variable declarations
-	GLint numExtensions;
-	GLint i;
-
-	// code
-	printf("OpenGL Vendor 		: %s\n", glGetString(GL_VENDOR));
-	printf("OpenGL Renderer 	: %s\n", glGetString(GL_RENDERER));
-	printf("OpenGL Version		: %s\n", glGetString(GL_VERSION));
-	printf("GLSL Version 		: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
-
-	// listing of supported extensions
-	glGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);
-
-	printf("\nNumber of OpenGL Extensions Supported : %i\n", numExtensions);
-	printf("=========================================================================.\n");
-
-	for (i = 0; i < numExtensions; i++) {
-		printf("%s\n", glGetStringi(GL_EXTENSIONS, i));
-	}
-
-	printf("=========================================================================.\n");
+void GLOWwindow::glowDestroyWindow(void) {
+    this->uninitialize();
 }
-

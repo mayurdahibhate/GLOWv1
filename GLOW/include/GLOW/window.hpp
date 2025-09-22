@@ -1,5 +1,7 @@
-#ifndef __window_manager_h__
-#define __window_manager_h__
+#pragma once
+
+#include <stdio.h>  // for printf()
+#include <stdlib.h> // for exit()
 
 #ifdef _WIN32
     #include <windows.h>
@@ -13,23 +15,14 @@
     #include <GL/glx.h>
 
     #include <memory.h> // for memset()
-#endif // WIN32
-
-#include <stdio.h>  // for printf()
-#include <stdlib.h> // for exit()
+#endif
 
 #define UNICODE
 #define MYICON 101
 
-typedef void (*InitializeCallback)      (void);
-typedef void (*UninitializeCallback)    (void);
-
 typedef void (*KeyboardCallback)        (unsigned int key);
 typedef void (*MouseMoveCallback)       (int x, int y);
 typedef void (*MouseClickCallback)      (unsigned int key, int x, int y);
-
-typedef void (*DisplayCallback)         (void);
-typedef void (*UpdateCallback)          (void);
 
 typedef void (*ReshapeCallback)         (int width, int height);
 
@@ -40,32 +33,121 @@ LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 typedef GLXContext (*glXCreateContextAttribsARBproc)(Display*, GLXFBConfig, GLXContext, Bool, const int*);
 #endif // WIN32
 
-void ToggleFullscreen(void);
-void uninitialize(void);
+#ifdef _WIN32
+class GLOWwindow {
+	private:
+        HWND _ghwnd = NULL;
+        DWORD _dwStyle = 0;
+        WINDOWPLACEMENT _wpPrev = { sizeof(WINDOWPLACEMENT) };
 
-void acewmCreateWindow(const char *title, int x, int y, int width, int height);
-void acewmDestroyWindow(void);
+        BOOL _gbFullscreen = FALSE;
+        BOOL _gbActive = FALSE;
 
-void acewmInitializeCallback(InitializeCallback callback);
-void acewmUninitiiizeCallback(UninitializeCallback callback); 
+        int _gWidth = 800;
+        int _gHeight = 600;
 
-void acewmFullScreen();
-void acewmExitFullScreen();
+        // OpenGL related global variables
+        HDC ghdc = NULL;
+        HGLRC ghrc = NULL;
 
-void acewmEventLoop();
-void acewmExitEventLoop();
+        void initialize(void);
+        void ToggleFullscreen(void);
+        void uninitialize(void);
 
-void acewmKeyboardCallback(KeyboardCallback callback);
-void acewmMouseMoveCallback(MouseMoveCallback callback);
-void acewmMouseClickCallback(MouseClickCallback callback);
+        // global callback declarations
+        InitializeCallback   _initializeCallback  = NULL;
+        KeyboardCallback     _keyboardCallback    = NULL;  
+        MouseMoveCallback    _mouseMoveCallback   = NULL; 
+        MouseClickCallback   _mouseClickCallback  = NULL;
+        DisplayCallback      _displayCallback     = NULL;   
+        UpdateCallback       _updateCallback      = NULL;    
+        ReshapeCallback      _reshapeCallback     = NULL;   
+        UninitializeCallback _uninitializeCallback = NULL;
 
-void acewmDisplayCallback(DisplayCallback callback);
-void acewmUpdateCallback(UpdateCallback callback);
+    public:
 
-void acewmReshapeCallback(ReshapeCallback callback);
+        // void glowDestroyWindow(void);
 
-void acewmSwapBuffers(void);
+        // void glowInitializeCallback(InitializeCallback callback);
+        // void glowUninitiiizeCallback(UninitializeCallback callback); 
 
-void printGLinfo();
+        void glowFullScreen();
+        void glowExitFullScreen();
+
+        void glowEventLoop();
+        void glowExitEventLoop();
+
+        void glowKeyboardCallback(KeyboardCallback callback);
+        void glowMouseMoveCallback(MouseMoveCallback callback);
+        void glowMouseClickCallback(MouseClickCallback callback);
+
+        void glowDisplayCallback(DisplayCallback callback);
+        void glowUpdateCallback(UpdateCallback callback);
+
+        void glowReshapeCallback(ReshapeCallback callback);
+
+        void glowSwapBuffers(void);
+
+        friend GLOWwindow* glowCreateWindow(const char *title, int x, int y, int width, int height);   
+};
+
+#else
+
+class GLOWwindow {
+    private:
+        Display *display = NULL;
+        Colormap colormap;
+        Window window;
+        XVisualInfo *visualInfo;
+
+        XEvent event;
+        KeySym keySym;
+        char keys[26];
+
+        Bool _gbFullscreen = False;
+        Bool _gbActive = False;
+
+        Bool bDone = False;
+
+        int _gWidth = 800;
+        int _gHeight = 600;
+
+        // OpenGL related global variable
+        glXCreateContextAttribsARBproc glXCreateContextAttribsARB = NULL;
+        GLXFBConfig glxFBConfig;
+        GLXContext glxContext = NULL;
+
+        int initialize(void);
+        void ToggleFullscreen(void);
+        void uninitialize(void);
+
+        // global callback declarations
+        KeyboardCallback     _keyboardCallback    = NULL;  
+        MouseMoveCallback    _mouseMoveCallback   = NULL; 
+        MouseClickCallback   _mouseClickCallback  = NULL;
+        ReshapeCallback      _reshapeCallback     = NULL;   
+
+    public:
+        void glowFullScreen();
+        void glowExitFullScreen();
+
+        void glowEventLoop();
+        void glowExitEventLoop();
+
+        void glowKeyboardCallback(KeyboardCallback callback);
+        void glowMouseMoveCallback(MouseMoveCallback callback);
+        void glowMouseClickCallback(MouseClickCallback callback);
+
+        void glowReshapeCallback(ReshapeCallback callback);
+
+        void glowSwapBuffers(void);
+
+        friend GLOWwindow* glowCreateWindow(const char *title, int x, int y, int width, int height);
+        bool glowWindowShouldClose(void);
+        void glowDestroyWindow(void);
+};
+
+GLOWwindow* glowCreateWindow(const char *title, int x, int y, int width, int height);
+GLOWwindow* glowCreateWindow(const char *title, int width, int height);
 
 #endif

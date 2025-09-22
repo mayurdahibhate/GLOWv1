@@ -18,7 +18,7 @@ GLuint vbo_color = 0;
 glm::mat4 perspectiveProjectionMatrix;
 GLuint desertTexture = 0;	
 
-Shader *simpleShader = NULL;
+GLOWshader *simpleShader = NULL;
 
 void init(void);
 
@@ -31,21 +31,21 @@ void uninit();
 
 // entry point function
 int main(int argc, char **argv) {
-	acewmInitializeCallback(init);
 
-	acewmKeyboardCallback(keyboard);
-	acewmReshapeCallback(resize);
+	GLOWwindow* window = glowCreateWindow("Grey filter!", 800, 600);
+	window->glowReshapeCallback(resize);
+	
+	init();
 
-	acewmDisplayCallback(draw);
-	acewmUpdateCallback(update);
+	while (!(window->glowWindowShouldClose())) {
+		draw();
+		update();
+    
+		window->glowSwapBuffers();
+	}
 
-	acewmCreateWindow("Hello Triangle!", 100, 100, 800, 600);
-
-	acewmEventLoop();
-
-	acewmUninitiiizeCallback(uninit);
-
-	return 0;
+	uninit();
+	window->glowDestroyWindow();
 }
 
 void init(void) {
@@ -54,24 +54,30 @@ void init(void) {
         exit(-1);
     }
 
-    simpleShader = new Shader("shaders/shader.vert", "shaders/shader.frag");
+    simpleShader = new GLOWshader("shaders/shader.vert", "shaders/shader.frag");
 
 	loadTextureFromFile("desert.png", &desertTexture);
+	
+	const float rectangle_position[] = {
+		// first triangle
+		1.0f, 1.0f, 0.0f,  // right top
+		-1.0f, 1.0f, 0.0f, // left top
+		-1.0f, -1.0f, 0.0, // left bottom
 
-	const GLfloat squarePosition[] = {
-		1.0f, -1.0f, 0.0f, +1.0f, // 0
-		+1.0f, -1.0f, 0.0f, +1.0f, // 1
-		-1.0f, +1.0f, 0.0f, +1.0f, // 2
-		+1.0f, -1.0f, 0.0f, +1.0f, // 1
-		+1.0f, +1.0f, 0.0f, +1.0f, // 3
-		-1.0f, +1.0f, 0.0f, +1.0f, // 2
+		// second triangle
+		-1.0f, -1.0f, 0.0f, // left bottom
+		1.0f, -1.0f, 0.0f,  // right bottom
+		1.0f, 1.0f, 0.0f	// right top
 	};
 
-	const GLfloat squareColor[] = {
- 		0.0f, 0.0f, // 0
-		1.0f, 0.0f, // 1
-		0.0f, 1.0f, // 2
-		1.0f, 1.0f  // 3
+	const float rectangle_texcoords[] = {
+		1.0f, 1.0f,
+		0.0f, 1.0f,
+		0.0f, 0.0f,
+
+		0.0f, 0.0f,
+		1.0f, 0.0f,
+		1.0f, 1.0f
 	};
 
 	// VAO Vertex Array Object
@@ -81,14 +87,14 @@ void init(void) {
 	// VBO for position
 	glGenBuffers(1, &vbo_position);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_position);	
-	glBufferData(GL_ARRAY_BUFFER, sizeof(squarePosition), squarePosition, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(rectangle_position), rectangle_position, GL_STATIC_DRAW);
 	glVertexAttribPointer(AMC_ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 	glEnableVertexAttribArray(AMC_ATTRIBUTE_POSITION);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	glGenBuffers(1, &vbo_color);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_color);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(squareColor), squareColor, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(rectangle_texcoords), rectangle_texcoords, GL_STATIC_DRAW);
 	glVertexAttribPointer(AMC_ATTRIBUTE_COLOR, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 	glEnableVertexAttribArray(AMC_ATTRIBUTE_COLOR);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -131,7 +137,7 @@ void draw(void) {
     simpleShader->use();
 
 	// transformations
-	glm::mat4 modelViewMatrix = glm::translate(glm::mat4(1.0), glm::vec3(0.0f, 0.0f, -5.0f));
+	glm::mat4 modelViewMatrix = glm::translate(glm::mat4(1.0), glm::vec3(0.0f, 0.0f, -3.0f));
 	glm::mat4 modelViewProjectionMatrix = perspectiveProjectionMatrix * modelViewMatrix;
 
 	// push above mvp vertex shader's mvp uniform
@@ -142,12 +148,10 @@ void draw(void) {
 
 	glBindVertexArray(vao);
 
-	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
 
 	glBindVertexArray(0);
 	glUseProgram(0);
-
-    acewmSwapBuffers();
 }
 
 void update(void) {

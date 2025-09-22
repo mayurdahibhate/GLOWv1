@@ -18,11 +18,10 @@ GLuint vbo_color = 0;
 glm::mat4 perspectiveProjectionMatrix;
 GLuint desertTexture = 0;	
 
-Shader *simpleShader = NULL;
+GLOWshader *simpleShader = NULL;
 
 void init(void);
 
-void keyboard(unsigned int);
 void draw(void);
 void update(void);
 void resize(int, int);
@@ -31,19 +30,21 @@ void uninit();
 
 // entry point function
 int main(int argc, char **argv) {
-	glowInitializeCallback(init);
+	
+	GLOWwindow* window = glowCreateWindow("Cube rendering!", 800, 600);
+	window->glowReshapeCallback(resize);
+	
+	init();
 
-	glowKeyboardCallback(keyboard);
-	glowReshapeCallback(resize);
+	while (!(window->glowWindowShouldClose())) {
+		draw();
+		update();
+    
+		window->glowSwapBuffers();
+	}
 
-	glowDisplayCallback(draw);
-	glowUpdateCallback(update);
-
-	glowCreateWindow("Cube rendering!", 100, 100, 800, 600);
-
-	glowEventLoop();
-
-	glowUninitiiizeCallback(uninit);
+	uninit();
+	window->glowDestroyWindow();
 
 	return 0;
 }
@@ -54,7 +55,7 @@ void init(void) {
         exit(-1);
     }
 
-    simpleShader = new Shader("shaders/shader.vert", "shaders/shader.frag");
+    simpleShader = new GLOWshader("shaders/shader.vert", "shaders/shader.frag");
 
 	// position
 	float cubeVertices[] = {
@@ -228,10 +229,6 @@ void init(void) {
 	perspectiveProjectionMatrix = glm::mat4(1.0);
 }
 
-void keyboard(unsigned int key) {
-	
-}
-
 void resize(int width, int height) {
     // code
 	if (height <= 0)
@@ -239,7 +236,6 @@ void resize(int width, int height) {
 
 	glViewport(0, 0, (GLsizei)width, (GLsizei)height);
 
-	// set perspective projection matrix
 	perspectiveProjectionMatrix = glm::perspective(glm::radians(40.0f), (GLfloat)width / (GLfloat)height, 0.1f, 100.0f);
 }
 
@@ -274,8 +270,6 @@ void draw(void) {
 
 	glBindVertexArray(0);
 	glUseProgram(0);
-
-    glowSwapBuffers();
 }
 
 void update(void) {

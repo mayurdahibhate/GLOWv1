@@ -29,19 +29,19 @@ void uninit();
 
 // entry point function
 int main(int argc, char **argv) {
-	acewmInitializeCallback(init);
+	glowInitializeCallback(init);
 
-	acewmKeyboardCallback(keyboard);
-	acewmReshapeCallback(resize);
+	glowKeyboardCallback(keyboard);
+	glowReshapeCallback(resize);
 
-	acewmDisplayCallback(draw);
-	acewmUpdateCallback(update);
+	glowDisplayCallback(draw);
+	glowUpdateCallback(update);
 
-	acewmCreateWindow("Hello Triangle!", 100, 100, 800, 600);
+	glowCreateWindow("Hello triangle!", 100, 100, 800, 600);
 
-	acewmEventLoop();
+	glowEventLoop();
 
-	acewmUninitiiizeCallback(uninit);
+	glowUninitiiizeCallback(uninit);
 
 	return 0;
 }
@@ -134,7 +134,7 @@ void draw(void) {
 	glBindVertexArray(0);
 	glUseProgram(0);
 
-    acewmSwapBuffers();
+    glowSwapBuffers();
 }
 
 void update(void) {
